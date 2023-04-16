@@ -7,6 +7,11 @@ import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract SinaneTokenTest is Test, IERC721Receiver {
     SinaneToken token;
+    address owner;
+
+    receive() external payable {}
+
+    fallback() external payable {}
 
     function onERC721Received(
         address,
@@ -19,16 +24,20 @@ contract SinaneTokenTest is Test, IERC721Receiver {
 
     function setUp() public {
         token = new SinaneToken();
+        owner = address(this);
     }
 
-    // function testReachMaxSupply() public {
-    //     for (uint256 supply = 0; supply < 300; supply++) {
-    //         token.safeMint(address(this));
-    //     }
+    function testReachMaxSupply() public {
+        token.setActivePresale();
+        vm.warp(block.timestamp + 1 days + 1 seconds);
 
-    //     vm.expectRevert(MaxSupplyReached.selector);
-    //     token.safeMint(address(this));
-    // }
+        for (uint256 supply = 0; supply < 300; supply++) {
+            token.sale{value: 0.005 ether}();
+        }
+
+        vm.expectRevert(MaxSupplyReached.selector);
+        token.sale{value: 0.005 ether}();
+    }
 
     function testPresaleReachMintLimit() public {
         token.setActivePresale();
@@ -61,7 +70,7 @@ contract SinaneTokenTest is Test, IERC721Receiver {
     function testPresaleExpired() public {
         token.setActivePresale();
         vm.warp(block.timestamp + 1 days + 1 seconds);
-        
+
         vm.expectRevert(PresaleClosed.selector);
         token.presale();
     }
@@ -82,5 +91,31 @@ contract SinaneTokenTest is Test, IERC721Receiver {
         token.setActivePresale();
         token.presale{value: 0.003 ether}();
         token.presale{value: 0.003 ether}();
+    }
+
+    function testSaleClosed() public {
+        token.setActivePresale();
+
+        vm.expectRevert(SaleClosed.selector);
+        token.sale{value: 0.005 ether}();
+
+        vm.warp(block.timestamp + 3 days + 1 seconds);
+        vm.expectRevert(SaleClosed.selector);
+        token.sale{value: 0.005 ether}();
+    }
+
+    function testSaleSuccess() public {
+        token.setActivePresale();
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+
+        token.sale{value: 0.005 ether}();
+    }
+
+    function testWithdraw() public {
+        token.setActivePresale();
+        token.presale{value: 0.003 ether}();
+        token.presale{value: 0.003 ether}();
+        hoax(owner);
+        token.withdraw();
     }
 }
