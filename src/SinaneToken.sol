@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "openzeppelin-contracts/contracts/utils/Counters.sol";
+import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 error MaxSupplyReached();
 error PresaleMaxSupplyReached();
@@ -12,8 +13,10 @@ error SaleClosed();
 error PresaleMintLimitReached(address);
 error InvalidAmount(address);
 
-contract SinaneToken is ERC721, Ownable {
+contract SinaneToken is ERC721, Ownable, ReentrancyGuard {
     using Counters for Counters.Counter;
+
+    bool public locked;
 
     bool activePresale = false;
     uint256 timeFromPresaleDebut;
@@ -59,7 +62,7 @@ contract SinaneToken is ERC721, Ownable {
         return false;
     }
 
-    function presale() external payable {
+    function presale() external payable nonReentrant {
         address to = msg.sender;
 
         if (!activePresale || isPresaleExpired()) revert PresaleClosed();
@@ -70,7 +73,7 @@ contract SinaneToken is ERC721, Ownable {
         safeMint(to);
     }
 
-    function sale() external payable {
+    function sale() external payable nonReentrant {
         address to = msg.sender;
 
         if (!isSaleOpen()) revert SaleClosed();
@@ -89,7 +92,7 @@ contract SinaneToken is ERC721, Ownable {
         _safeMint(to, tokenId);
     }
 
-    function withdraw() external onlyOwner {
+    function withdraw() external onlyOwner nonReentrant {
         payable(msg.sender).transfer(address(this).balance);
     }
 }
