@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import "openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
-import "openzeppelin-contracts/contracts/utils/Counters.sol";
 import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 error MaxSupplyReached();
@@ -24,7 +23,8 @@ contract SinaneToken is ERC721Enumerable, Ownable, ReentrancyGuard {
     uint256 public constant SALE_DURATION = 3 days;
 
     uint256 public constant MAX_SUPPLY = 300;
-    uint256 public constant MAX_PRESALE_SUPPLY = 300;
+    uint256 public constant MAX_PRESALE_SUPPLY = 100;
+
     mapping(address => uint256) public mintCounter;
 
     constructor() ERC721("SinaneToken", "SIN") {}
@@ -62,7 +62,7 @@ contract SinaneToken is ERC721Enumerable, Ownable, ReentrancyGuard {
         if (!activePresale || isPresaleExpired()) revert PresaleClosed();
         if (msg.value != presalePrice) revert InvalidAmount(to);
         if (mintCounter[to] >= 2) revert PresaleMintLimitReached(to);
-        if (totalSupply() == 100) revert PresaleMaxSupplyReached();
+        if (totalSupply() == MAX_PRESALE_SUPPLY) revert PresaleMaxSupplyReached();
 
         safeMint(to);
     }
@@ -79,7 +79,7 @@ contract SinaneToken is ERC721Enumerable, Ownable, ReentrancyGuard {
     function safeMint(address to) internal {
         uint256 tokenId = totalSupply();
 
-        if (tokenId >= MAX_SUPPLY) revert MaxSupplyReached();
+        if (totalSupply() >= MAX_SUPPLY) revert MaxSupplyReached();
 
         mintCounter[to]++;
         _safeMint(to, tokenId);
